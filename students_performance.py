@@ -39,55 +39,43 @@ if role == "Teacher":
 
 elif role == "Student":
     # Dropdown for Gender
-    gender = st.selectbox("Select Gender", ["Male", "Female"])
-    gender_binary = 0 if gender == "Male" else 1
+gender = st.selectbox("Select Gender", ["Male", "Female"])
+gender_binary = 0 if gender == "Male" else 1
 
-    # Dropdown for Study Time Weekly
-    study_time = st.selectbox("Study Time Weekly (hours)", ["0-5", "5-10", "10-15", "15-20"])
-    study_time_range = [int(x) for x in study_time.split("-")]
+# Dropdown for Study Time Weekly
+study_time = st.selectbox("Study Time Weekly (hours)", ["0-5", "5-10", "10-15", "15-20"])
+study_time_range = [int(x) for x in study_time.split("-")]
 
-    # Dropdown for Absences
-    absences = st.selectbox("Absences", ["0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
-    absences_range = [int(x) for x in absences.split("-")]
+# Dropdown for Absences
+absences = st.selectbox("Absences", ["0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
+absences_range = [int(x) for x in absences.split("-")]
 
-    # Dropdown for Tutoring
-    tutoring = st.selectbox("Tutoring", ["No", "Yes"])
-    tutoring_binary = 0 if tutoring == "No" else 1
+# Dropdown for Tutoring
+tutoring = st.selectbox("Tutoring", ["No", "Yes"])
+tutoring_binary = 0 if tutoring == "No" else 1
 
-    # Dropdown for Extracurricular
-    extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
-    extracurricular_binary = 0 if extracurricular == "No" else 1
+# Dropdown for Extracurricular
+extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
+extracurricular_binary = 0 if extracurricular == "No" else 1
 
-    # Step 3: Predict GPA and GradeClass
-    if st.button("Predict Performance"):
-        # Prepare data for prediction
-        X = student_data.drop(columns=["StudentID", "GPA", "GradeClass"])
-        y_gpa = student_data["GPA"]
-        y_grade = student_data["GradeClass"]
+# Prepare input data for prediction
+# Ensure that the user input is consistent with the model's feature set.
+input_data = pd.DataFrame([{
+    "Gender": gender_binary,
+    "StudyTimeWeekly": study_time_range[0],  # Approximation using range start
+    "Absences": absences_range[0],           # Approximation using range start
+    "Tutoring": tutoring_binary,
+    "Extracurricular": extracurricular_binary
+}])
 
-        # Train-Test Split
-        X_train, X_test, y_gpa_train, y_gpa_test, y_grade_train, y_grade_test = train_test_split(
-            X, y_gpa, y_grade, test_size=0.2, random_state=42
-        )
+# Ensure that the input matches the columns of the trained model (i.e., exclude StudentID, GPA, GradeClass)
+input_data = input_data[["Gender", "StudyTimeWeekly", "Absences", "Tutoring", "Extracurricular"]]
 
-        # Train Models
-        gpa_model = RandomForestRegressor(random_state=42)
-        gpa_model.fit(X_train, y_gpa_train)
+# Make Predictions
+if st.button("Predict Performance"):
+    predicted_gpa = gpa_model.predict(input_data)[0]
+    predicted_grade = grade_model.predict(input_data)[0]
 
-        grade_model = RandomForestRegressor(random_state=42)
-        grade_model.fit(X_train, y_grade_train)
-
-        # Make Predictions
-        input_data = [[
-            gender_binary,
-            study_time_range[0],  # Approximation using range start
-            absences_range[0],    # Approximation using range start
-            tutoring_binary,
-            extracurricular_binary
-        ]]
-        predicted_gpa = gpa_model.predict(input_data)[0]
-        predicted_grade = grade_model.predict(input_data)[0]
-
-        # Display Results
-        st.write(f"Predicted GPA: {predicted_gpa:.2f}")
-        st.write(f"Predicted Grade Class: {int(predicted_grade)}")
+    # Display Results
+    st.write(f"Predicted GPA: {predicted_gpa:.2f}")
+    st.write(f"Predicted Grade Class: {int(predicted_grade)}")
