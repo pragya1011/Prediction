@@ -112,8 +112,8 @@ def student_view(data):
     extracurricular_value = {"No": 0, "Yes": 1}[extracurricular]
 
     # Filter data based on user input
-    filtered_data = data[(
-        data["Gender"] == gender) &
+    filtered_data = data[
+        (data["Gender"] == gender) &
         (data["Age"] == age) &
         (data["StudyTimeWeekly"] >= study_time_min) & (data["StudyTimeWeekly"] < study_time_max) &
         (data["Absences"] >= absences_min) & (data["Absences"] < absences_max) &
@@ -126,11 +126,9 @@ def student_view(data):
         st.warning("No students found with the selected criteria.")
         return
 
-    # Predict GPA and Grade
+    # Predict GPA and Grade Class based on filtered data
     predicted_gpa = filtered_data['GPA'].mean() if not filtered_data['GPA'].isna().all() else 0
     predicted_grade = filtered_data['GradeClass'].mode()[0] if not filtered_data['GradeClass'].isna().empty else "N/A"
-    
-    grade_map = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
 
     st.write(f"**Predicted GPA:** {predicted_gpa:.2f}")
     st.write(f"**Predicted Grade Class:** {predicted_grade}")
@@ -144,7 +142,7 @@ def student_view(data):
         "E": "Needs improvement, focus on the priorities."
     }
     st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
-    
+
 if __name__ == "__main__":
     st.sidebar.title("Choose your Role")
     role = st.sidebar.radio("Select Role", ["Administrator", "Teacher", "Student"])
@@ -155,3 +153,4 @@ if __name__ == "__main__":
         teacher_view(student_data)
     elif role == "Student":
         student_view(student_data)
+
