@@ -7,8 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/17RpWu_7weSpWF34owjnHYdXN7_qLvg99
 """
 
-pip install -r requirements.txt
-
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
@@ -25,10 +23,15 @@ def load_data():
         data = pd.read_csv(gdrive_link)
         
         # Encoding categorical columns into numerical values
-        le = LabelEncoder()
-        data['Gender'] = le.fit_transform(data['Gender'])  # Male=0, Female=1
-        data['Tutoring'] = le.fit_transform(data['Tutoring'])  # No=0, Yes=1
-        data['Extracurricular'] = le.fit_transform(data['Extracurricular'])  # No=0, Yes=1
+        le_gender = LabelEncoder()
+        le_tutoring = LabelEncoder()
+        le_extracurricular = LabelEncoder()
+        
+        data['Gender'] = le_gender.fit_transform(data['Gender'])  # Male=0, Female=1
+        data['Tutoring'] = le_tutoring.fit_transform(data['Tutoring'])  # No=0, Yes=1
+        data['Extracurricular'] = le_extracurricular.fit_transform(data['Extracurricular'])  # No=0, Yes=1
+        
+        # Map GradeClass to numeric
         grade_mapping = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
         data['GradeClass'] = data['GradeClass'].map(grade_mapping)
         return data
@@ -36,6 +39,7 @@ def load_data():
         st.error(f"Error loading dataset: {e}")
         return pd.DataFrame()  # Return empty DataFrame if error occurs
 
+# Load the dataset
 student_data = load_data()
 
 # Train a model (Random Forest Regressor) to predict GPA and Grade
@@ -69,75 +73,78 @@ def train_model(data):
 # Train the model once the data is loaded
 model_gpa, model_grade, mse_gpa, mse_grade = train_model(student_data)
 
-# Function for Student View (prediction interface)
-def student_view(data):
-    st.subheader("Student Dashboard")
+# Role-based Views
+role = st.selectbox("Choose", ["Student", "Teacher", "Administrator"])
 
-    # Select Gender
-    gender = st.selectbox("Select Gender", ["Select an option", "Male", "Female"])
-    if gender == "Select an option":
-        return
+if role == "Administrator":
+    st.subheader("Administrator Dashboard")
+    total_students = len(student_data['StudentID'].unique())
+    avg_gpa = student_data['GPA'].mean()
+    grade_counts = student_data['GradeClass'].value_counts()
 
-    # Select Age
-    age = st.selectbox("Select Age", ["Select an option"] + list(range(15, 19)))  # Allowable range is 15-18
-    if age == "Select an option":
-        return
+    st.write(f"**Total Students:** {total_students}")
+    st.write(f"**Average GPA:** {avg_gpa:.2f}")
+    st.write("**Students by Grade:**")
+    st.bar_chart(grade_counts)
 
-    # Select Study Time Weekly
-    study_time = st.selectbox("Select Study Time Weekly", ["Select an option", "0-5", "5-10", "10-15", "15-20"])
-    if study_time == "Select an option":
-        return
-    study_time_min, study_time_max = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20)}.get(study_time, (0, 0))
+elif role == "Teacher":
+    st.subheader("Teacher Dashboard")
+    student_ids = student_data["StudentID"].tolist()
+    selected_id = st.selectbox("Select Student ID", student_ids)
+    if selected_id:
+        details = student_data[student_data["StudentID"] == selected_id]
+        st.write("Student Details:")
+        st.write(details)
 
-    # Select Absences
-    absences = st.selectbox("Select Absences", ["Select an option", "0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
-    if absences == "Select an option":
-        return
-    absences_min, absences_max = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20), "20-25": (20, 25), "25-30": (25, 30)}.get(absences, (0, 0))
+elif role == "Student":
+    st.subheader("Student Performance Prediction")
 
-    # Select Tutoring
-    tutoring = st.selectbox("Tutoring", ["Select an option", "No", "Yes"])
-    if tutoring == "Select an option":
-        return
-    tutoring_value = {"No": 0, "Yes": 1}[tutoring]
+    # Dropdown for Gender
+    gender = st.selectbox("Select Gender", ["Male", "Female"])
+    gender_binary = 0 if gender == "Male" else 1
 
-    # Select Extracurricular
-    extracurricular = st.selectbox("Extracurricular", ["Select an option", "No", "Yes"])
-    if extracurricular == "Select an option":
-        return
-    extracurricular_value = {"No": 0, "Yes": 1}[extracurricular]
+    # Dropdown for Study Time Weekly
+    study_time = st.selectbox("Study Time Weekly (hours)", ["0-5", "5-10", "10-15", "15-20"])
+    study_time_range = [int(x) for x in study_time.split("-")]
 
-    # Prepare the input for prediction (convert to numeric format)
-    gender_value = {"Male": 0, "Female": 1}[gender]
-    X_new = pd.DataFrame([[gender_value, age, study_time_min, absences_min, tutoring_value, extracurricular_value]],
-                         columns=['Gender', 'Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'Extracurricular'])
+    # Dropdown for Absences
+    absences = st.selectbox("Absences", ["0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
+    absences_range = [int(x) for x in absences.split("-")]
 
-    # Predict GPA and Grade Class
-    predicted_gpa = model_gpa.predict(X_new)[0]
-    predicted_grade_index = int(model_grade.predict(X_new)[0])
-    predicted_grade = ['A', 'B', 'C', 'D', 'E'][predicted_grade_index]
+    # Dropdown for Tutoring
+    tutoring = st.selectbox("Tutoring", ["No", "Yes"])
+    tutoring_binary = 0 if tutoring == "No" else 1
 
-    st.write(f"**Predicted GPA:** {predicted_gpa:.2f}")
-    st.write(f"**Predicted Grade Class:** {predicted_grade}")
+    # Dropdown for Extracurricular
+    extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
+    extracurricular_binary = 0 if extracurricular == "No" else 1
 
-    # Recommendation based on grade
-    recommendation = {
-        "A": "Performed good, keep it up.",
-        "B": "Working hard, do not stop now.",
-        "C": "There are chances of going higher, keep the motivation high.",
-        "D": "Can do better, work harder and put more effort.",
-        "E": "Needs improvement, focus on the priorities."
-    }
-    st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
+    # Step 3: Predict GPA and GradeClass
+    if st.button("Predict Performance"):
+        # Prepare data for prediction
+        input_data = [[
+            gender_binary,
+            study_time_range[0],  # Approximation using range start
+            absences_range[0],    # Approximation using range start
+            tutoring_binary,
+            extracurricular_binary
+        ]]
 
-# Streamlit Sidebar for Role Selection
-if __name__ == "__main__":
-    st.sidebar.title("Choose your Role")
-    role = st.sidebar.radio("Select Role", ["Administrator", "Teacher", "Student"])
+        # Make Predictions
+        predicted_gpa = model_gpa.predict(input_data)[0]
+        predicted_grade_index = int(model_grade.predict(input_data)[0])
+        predicted_grade = ['A', 'B', 'C', 'D', 'E'][predicted_grade_index]
 
-    if role == "Administrator":
-        administrator_view(student_data)
-    elif role == "Teacher":
-        teacher_view(student_data)
-    elif role == "Student":
-        student_view(student_data)
+        # Display Results
+        st.write(f"Predicted GPA: {predicted_gpa:.2f}")
+        st.write(f"Predicted Grade Class: {predicted_grade}")
+
+        # Recommendation based on grade
+        recommendation = {
+            "A": "Performed good, keep it up.",
+            "B": "Working hard, do not stop now.",
+            "C": "There are chances of going higher, keep the motivation high.",
+            "D": "Can do better, work harder and put more effort.",
+            "E": "Needs improvement, focus on the priorities."
+        }
+        st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
