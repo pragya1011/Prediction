@@ -144,8 +144,11 @@ def student_view(data):
         return
     extracurricular_value = {"No": 0, "Yes": 1}[extracurricular]
 
+    # Encode categorical inputs using label encoder
+    gender_encoded = label_encoder.transform([gender])[0]
+
     # Prepare input data for prediction
-    input_data = pd.DataFrame([[gender, age, study_time_min, absences_min, tutoring_value, extracurricular_value]],
+    input_data = pd.DataFrame([[gender_encoded, age, study_time_min, absences_min, tutoring_value, extracurricular_value]],
                               columns=['Gender', 'Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'Extracurricular'])
 
     # Predict GPA and Grade
