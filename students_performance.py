@@ -164,15 +164,19 @@ def student_view(data):
     input_data = pd.DataFrame([[gender, age, study_time_min, absences_min, tutoring_value, extracurricular_value]],
                               columns=['Gender', 'Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'Extracurricular'])
 
+    # Encode the input data to match the format of the trained model
+    input_data['Gender'] = le_gender.transform(input_data['Gender'])
+    input_data['Tutoring'] = le_tutoring.transform(input_data['Tutoring'])
+    input_data['Extracurricular'] = le_extracurricular.transform(input_data['Extracurricular'])
+
     # Predict GPA
     predicted_gpa = gpa_model.predict(input_data)[0]
     # Predict Grade Class
     predicted_grade = grade_model.predict(input_data)[0]
 
-    # Reverse the label encoding for Gender and other categorical variables if needed
-    predicted_grade = le_gender.inverse_transform([predicted_grade])[0]  # Or any other reverse transformation if necessary
+    # Reverse the label encoding for Grade Class if necessary (using the inverse transform)
+    predicted_grade = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}[predicted_grade]
 
-    # Display predictions
     st.write(f"**Predicted GPA:** {predicted_gpa:.2f}")
     st.write(f"**Predicted Grade Class:** {predicted_grade}")
 
@@ -196,4 +200,3 @@ if __name__ == "__main__":
         teacher_view(student_data)
     elif role == "Student":
         student_view(student_data)
-
