@@ -10,6 +10,11 @@ Original file is located at
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, accuracy_score
+from sklearn.ensemble import RandomForestClassifier
 
 # Load the dataset from a Google Drive link
 @st.cache
@@ -30,6 +35,50 @@ def load_data():
         return pd.DataFrame()  # Return empty DataFrame if error occurs
 
 student_data = load_data()
+
+# Train a model to predict GPA and Grade Class
+def train_model(data):
+    # Encoding categorical variables
+    le_gender = LabelEncoder()
+    data['Gender'] = le_gender.fit_transform(data['Gender'])
+    le_tutoring = LabelEncoder()
+    data['Tutoring'] = le_tutoring.fit_transform(data['Tutoring'])
+    le_extracurricular = LabelEncoder()
+    data['Extracurricular'] = le_extracurricular.fit_transform(data['Extracurricular'])
+
+    # Prepare features (X) and target (Y)
+    X = data[['Gender', 'Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'Extracurricular']]
+    y_gpa = data['GPA']
+    y_grade = data['GradeClass']
+
+    # Train test split for GPA prediction
+    X_train, X_test, y_train_gpa, y_test_gpa = train_test_split(X, y_gpa, test_size=0.2, random_state=42)
+
+    # Train Linear Regression model for GPA prediction
+    gpa_model = LinearRegression()
+    gpa_model.fit(X_train, y_train_gpa)
+
+    # Train test split for Grade prediction
+    X_train, X_test, y_train_grade, y_test_grade = train_test_split(X, y_grade, test_size=0.2, random_state=42)
+
+    # Train model for Grade Class prediction (classification)
+    grade_model = RandomForestClassifier(random_state=42)
+    grade_model.fit(X_train, y_train_grade)
+
+    # Evaluate models
+    gpa_predictions = gpa_model.predict(X_test)
+    grade_predictions = grade_model.predict(X_test)
+
+    gpa_rmse = mean_squared_error(y_test_gpa, gpa_predictions, squared=False)
+    grade_accuracy = accuracy_score(y_test_grade, grade_predictions)
+
+    st.write(f"**Model Performance**")
+    st.write(f"GPA Prediction RMSE: {gpa_rmse:.2f}")
+    st.write(f"Grade Prediction Accuracy: {grade_accuracy:.2f}")
+
+    return gpa_model, grade_model, le_gender, le_tutoring, le_extracurricular
+
+gpa_model, grade_model, le_gender, le_tutoring, le_extracurricular = train_model(student_data)
 
 # Administrator View
 def administrator_view(data):
@@ -111,25 +160,19 @@ def student_view(data):
         return
     extracurricular_value = {"No": 0, "Yes": 1}[extracurricular]
 
-    # Filter data based on user input
-    filtered_data = data[
-        (data["Gender"] == gender) &
-        (data["Age"] == age) &
-        (data["StudyTimeWeekly"] >= study_time_min) & (data["StudyTimeWeekly"] < study_time_max) &
-        (data["Absences"] >= absences_min) & (data["Absences"] < absences_max) &
-        (data["Tutoring"] == tutoring_value) &
-        (data["Extracurricular"] == extracurricular_value)
-    ]
+    # Prepare the input data
+    input_data = pd.DataFrame([[gender, age, study_time_min, absences_min, tutoring_value, extracurricular_value]],
+                              columns=['Gender', 'Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'Extracurricular'])
 
-    # Check if any data matches the filters
-    if filtered_data.empty:
-        st.warning("No students found with the selected criteria.")
-        return
+    # Predict GPA
+    predicted_gpa = gpa_model.predict(input_data)[0]
+    # Predict Grade Class
+    predicted_grade = grade_model.predict(input_data)[0]
 
-    # Predict GPA and Grade Class based on filtered data
-    predicted_gpa = filtered_data['GPA'].mean() if not filtered_data['GPA'].isna().all() else 0
-    predicted_grade = filtered_data['GradeClass'].mode()[0] if not filtered_data['GradeClass'].isna().empty else "N/A"
+    # Reverse the label encoding for Gender and other categorical variables if needed
+    predicted_grade = le_gender.inverse_transform([predicted_grade])[0]  # Or any other reverse transformation if necessary
 
+    # Display predictions
     st.write(f"**Predicted GPA:** {predicted_gpa:.2f}")
     st.write(f"**Predicted Grade Class:** {predicted_grade}")
 
