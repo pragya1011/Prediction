@@ -72,51 +72,68 @@ def teacher_view(data):
 # Student View
 def student_view(data):
     st.subheader("Student Dashboard")
-    gender = st.selectbox("Select Gender", ["Male", "Female"])
-    age = st.selectbox("Select Age", list(range(10, 21)))
-    if age < 15 or age > 18:
-        st.error("Chosen wrong value, kindly choose between 15 and 18.")
-        return
-    study_time = st.selectbox("Study Time Weekly", ["0-5", "5-10", "10-15", "15-20"])
-    absences = st.selectbox("Absences", ["0-5", "5-10", "10-15", "15-20", "25-30"])
-    tutoring = st.selectbox("Tutoring", ["No", "Yes"])
-    extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
 
-    # Filter data based on input
+    # Select Gender
+    gender_map = {0: "Male", 1: "Female"}
+    gender_reverse_map = {"Male": 0, "Female": 1}
+    gender = st.selectbox("Select Gender", ["Male", "Female"])
+    gender_value = gender_reverse_map[gender]
+
+    # Select Age
+    age = st.selectbox("Select Age", list(range(15, 19)))  # Allowable range is 15-18
+    if age not in data['Age'].unique():
+        st.error("Chosen wrong value, kindly choose between 15 and 18")
+        return
+
+    # Select Study Time Weekly
+    study_time_ranges = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20)}
+    study_time = st.selectbox("Select Study Time Weekly", list(study_time_ranges.keys()))
+    study_time_min, study_time_max = study_time_ranges[study_time]
+
+    # Select Absences
+    absence_ranges = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20), "20-25": (20, 25), "25-30": (25, 30)}
+    absences = st.selectbox("Select Absences", list(absence_ranges.keys()))
+    absences_min, absences_max = absence_ranges[absences]
+
+    # Select Tutoring
+    tutoring_map = {0: "No", 1: "Yes"}
+    tutoring_reverse_map = {"No": 0, "Yes": 1}
+    tutoring = st.selectbox("Tutoring", ["No", "Yes"])
+    tutoring_value = tutoring_reverse_map[tutoring]
+
+    # Select Extracurricular
+    extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
+    extracurricular_value = tutoring_reverse_map[extracurricular]
+
+    # Filter data based on user input
     filtered_data = data[
-        (data['Gender'] == gender) &
-        (data['Age'] == age)
+        (data["Gender"] == gender_value) &
+        (data["Age"] == age) &
+        (data["StudyTimeWeekly"] >= study_time_min) & (data["StudyTimeWeekly"] < study_time_max) &
+        (data["Absences"] >= absences_min) & (data["Absences"] < absences_max) &
+        (data["Tutoring"] == tutoring_value) &
+        (data["Extracurricular"] == extracurricular_value)
     ]
 
-    if len(filtered_data) == 0:
-        st.warning("No data found for the selected inputs.")
+    # Check if any data matches the filters
+    if filtered_data.empty:
+        st.warning("No students found with the selected criteria.")
         return
 
-    # Predict GPA and Grade (Approximation using mean values)
+    # Predict GPA and Grade
     predicted_gpa = filtered_data['GPA'].mean()
     predicted_grade = filtered_data['GradeClass'].mode()[0]
+    grade_map = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
 
     st.write(f"**Predicted GPA:** {predicted_gpa:.2f}")
-    st.write(f"**Predicted Grade:** {predicted_grade}")
+    st.write(f"**Predicted Grade Class:** {grade_map[int(predicted_grade)]}")
 
-    # Recommendation based on Grade
-    grade_message = {
-        "A": "Performed well, keep it up!",
+    # Recommendation based on grade
+    recommendation = {
+        "A": "Performed good, keep it up.",
         "B": "Working hard, do not stop now.",
-        "C": "Chances of going higher, stay motivated.",
+        "C": "There are chances of going higher, keep the motivation high.",
         "D": "Can do better, work harder and put more effort.",
-        "E": "Needs improvement, focus on priorities."
+        "E": "Needs improvement, focus on the priorities."
     }
-    st.write(f"**Recommendation:** {grade_message[predicted_grade]}")
-
-# Main App
-st.title("Student Performance Prediction Model")
-st.sidebar.title("Options")
-option = st.sidebar.selectbox("Choose", ["Administrator", "Teacher", "Student"])
-
-if option == "Administrator":
-    administrator_view(student_data)
-elif option == "Teacher":
-    teacher_view(student_data)
-elif option == "Student":
-    student_view(student_data)
+    st.write(f"**Recommendation:** {recommendation[grade_map[int(predicted_grade)]]}")
