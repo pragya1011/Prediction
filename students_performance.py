@@ -108,4 +108,3 @@ elif option == "Teacher":
     teacher_view(student_data)
 elif option == "Student":
     student_view(student_data)
-        st.write(f"Predicted Grade Class: {int(predicted_grade)}")
