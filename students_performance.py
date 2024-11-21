@@ -7,24 +7,27 @@ Original file is located at
     https://colab.research.google.com/drive/17RpWu_7weSpWF34owjnHYdXN7_qLvg99
 """
 
-# Import necessary libraries
-import streamlit as st
 import pandas as pd
+import streamlit as st
 import matplotlib.pyplot as plt
 
 # Load the dataset from a Google Drive link
 @st.cache
 def load_data():
     # Replace with your public Google Drive link
-    gdrive_link = "https://drive.google.com/uc?id=1HnLCBBbmV3MRrSPARsFOx6kZCqpUCPEo"  # Replace FILE_ID with the actual ID
-    data = pd.read_csv(gdrive_link)
-    # Replace binary values and map grades
-    data['Gender'] = data['Gender'].replace({0: "Male", 1: "Female"})
-    data['Tutoring'] = data['Tutoring'].replace({0: "No", 1: "Yes"})
-    data['Extracurricular'] = data['Extracurricular'].replace({0: "No", 1: "Yes"})
-    grade_mapping = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
-    data['GradeClass'] = data['GradeClass'].map(grade_mapping)
-    return data
+    gdrive_link = "https://drive.google.com/uc?id=1HnLCBBbmV3MRrSPARsFOx6kZCqpUCPEo"  # Replace with the actual file ID
+    try:
+        data = pd.read_csv(gdrive_link)
+        # Replace binary values and map grades
+        data['Gender'] = data['Gender'].replace({0: "Male", 1: "Female"})
+        data['Tutoring'] = data['Tutoring'].replace({0: "No", 1: "Yes"})
+        data['Extracurricular'] = data['Extracurricular'].replace({0: "No", 1: "Yes"})
+        grade_mapping = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
+        data['GradeClass'] = data['GradeClass'].map(grade_mapping)
+        return data
+    except Exception as e:
+        st.error(f"Error loading dataset: {e}")
+        return pd.DataFrame()  # Return empty DataFrame if error occurs
 
 student_data = load_data()
 
@@ -43,71 +46,74 @@ def administrator_view(data):
 # Teacher View
 def teacher_view(data):
     st.subheader("Teacher Dashboard")
-    student_id = st.selectbox("Select Student ID", data['StudentID'])
-    student_details = data[data['StudentID'] == student_id]
-    st.write("### Student Details")
-    st.dataframe(student_details)
+    student_id = st.selectbox("Select Student ID", ["Select an option"] + data['StudentID'].tolist())
+    if student_id != "Select an option":
+        student_details = data[data['StudentID'] == student_id]
+        st.write("### Student Details")
+        st.dataframe(student_details)
 
-    if st.button("View Graphical Representation"):
-        st.write("Graphical Representation of Student Details")
+        if st.button("View Graphical Representation"):
+            st.write("Graphical Representation of Student Details")
 
-        # Select only numeric data for plotting
-        numeric_data = student_details.select_dtypes(include=['number']).drop(columns=['StudentID'], errors='ignore')
-        
-        # Check if there's numeric data to plot
-        if numeric_data.empty:
-            st.error("No numeric data available for plotting.")
-            return
+            # Select only numeric data for plotting
+            numeric_data = student_details.select_dtypes(include=['number']).drop(columns=['StudentID'], errors='ignore')
+            
+            # Check if there's numeric data to plot
+            if numeric_data.empty:
+                st.error("No numeric data available for plotting.")
+                return
 
-        # Transpose for better visualization
-        numeric_data = numeric_data.T
-        numeric_data.columns = ['Value']
+            # Transpose for better visualization
+            numeric_data = numeric_data.T
+            numeric_data.columns = ['Value']
 
-        # Plot the data
-        fig, ax = plt.subplots()
-        numeric_data.plot(kind='bar', legend=False, ax=ax, color='skyblue')
-        plt.title(f"Student ID: {student_id} - Numeric Details")
-        st.pyplot(fig)
+            # Plot the data
+            fig, ax = plt.subplots()
+            numeric_data.plot(kind='bar', legend=False, ax=ax, color='skyblue')
+            plt.title(f"Student ID: {student_id} - Numeric Details")
+            st.pyplot(fig)
 
 # Student View
 def student_view(data):
     st.subheader("Student Dashboard")
 
     # Select Gender
-    gender_map = {0: "Male", 1: "Female"}
-    gender_reverse_map = {"Male": 0, "Female": 1}
-    gender = st.selectbox("Select Gender", ["Male", "Female"])
-    gender_value = gender_reverse_map[gender]
+    gender = st.selectbox("Select Gender", ["Select an option", "Male", "Female"])
+    if gender == "Select an option":
+        return
 
     # Select Age
-    age = st.selectbox("Select Age", list(range(15, 19)))  # Allowable range is 15-18
-    if age not in data['Age'].unique():
-        st.error("Chosen wrong value, kindly choose between 15 and 18")
+    age = st.selectbox("Select Age", ["Select an option"] + list(range(15, 19)))  # Allowable range is 15-18
+    if age == "Select an option":
         return
 
     # Select Study Time Weekly
-    study_time_ranges = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20)}
-    study_time = st.selectbox("Select Study Time Weekly", list(study_time_ranges.keys()))
-    study_time_min, study_time_max = study_time_ranges[study_time]
+    study_time = st.selectbox("Select Study Time Weekly", ["Select an option", "0-5", "5-10", "10-15", "15-20"])
+    if study_time == "Select an option":
+        return
+    study_time_min, study_time_max = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20)}.get(study_time, (0, 0))
 
     # Select Absences
-    absence_ranges = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20), "20-25": (20, 25), "25-30": (25, 30)}
-    absences = st.selectbox("Select Absences", list(absence_ranges.keys()))
-    absences_min, absences_max = absence_ranges[absences]
+    absences = st.selectbox("Select Absences", ["Select an option", "0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
+    if absences == "Select an option":
+        return
+    absences_min, absences_max = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20), "20-25": (20, 25), "25-30": (25, 30)}.get(absences, (0, 0))
 
     # Select Tutoring
-    tutoring_map = {0: "No", 1: "Yes"}
-    tutoring_reverse_map = {"No": 0, "Yes": 1}
-    tutoring = st.selectbox("Tutoring", ["No", "Yes"])
-    tutoring_value = tutoring_reverse_map[tutoring]
+    tutoring = st.selectbox("Tutoring", ["Select an option", "No", "Yes"])
+    if tutoring == "Select an option":
+        return
+    tutoring_value = {"No": 0, "Yes": 1}[tutoring]
 
     # Select Extracurricular
-    extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
-    extracurricular_value = tutoring_reverse_map[extracurricular]
+    extracurricular = st.selectbox("Extracurricular", ["Select an option", "No", "Yes"])
+    if extracurricular == "Select an option":
+        return
+    extracurricular_value = {"No": 0, "Yes": 1}[extracurricular]
 
     # Filter data based on user input
-    filtered_data = data[
-        (data["Gender"] == gender_value) &
+    filtered_data = data[(
+        data["Gender"] == gender) &
         (data["Age"] == age) &
         (data["StudyTimeWeekly"] >= study_time_min) & (data["StudyTimeWeekly"] < study_time_max) &
         (data["Absences"] >= absences_min) & (data["Absences"] < absences_max) &
@@ -121,12 +127,13 @@ def student_view(data):
         return
 
     # Predict GPA and Grade
-    predicted_gpa = filtered_data['GPA'].mean()
-    predicted_grade = filtered_data['GradeClass'].mode()[0]
+    predicted_gpa = filtered_data['GPA'].mean() if not filtered_data['GPA'].isna().all() else 0
+    predicted_grade = filtered_data['GradeClass'].mode()[0] if not filtered_data['GradeClass'].isna().empty else "N/A"
+    
     grade_map = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
 
     st.write(f"**Predicted GPA:** {predicted_gpa:.2f}")
-    st.write(f"**Predicted Grade Class:** {grade_map[int(predicted_grade)]}")
+    st.write(f"**Predicted Grade Class:** {predicted_grade}")
 
     # Recommendation based on grade
     recommendation = {
@@ -136,4 +143,15 @@ def student_view(data):
         "D": "Can do better, work harder and put more effort.",
         "E": "Needs improvement, focus on the priorities."
     }
-    st.write(f"**Recommendation:** {recommendation[grade_map[int(predicted_grade)]]}")
+    st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
+    
+if __name__ == "__main__":
+    st.sidebar.title("Choose your Role")
+    role = st.sidebar.radio("Select Role", ["Administrator", "Teacher", "Student"])
+
+    if role == "Administrator":
+        administrator_view(student_data)
+    elif role == "Teacher":
+        teacher_view(student_data)
+    elif role == "Student":
+        student_view(student_data)
