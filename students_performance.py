@@ -8,195 +8,124 @@ Original file is located at
 """
 
 import pandas as pd
+import numpy as np
 import streamlit as st
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, accuracy_score
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import LabelEncoder
 
-# Load the dataset from a Google Drive link
-@st.cache
+# Streamlit App
+st.title("Student Performance Prediction")
+
+# Load dataset (use @st.cache_data for caching)
+@st.cache_data
 def load_data():
-    # Replace with your public Google Drive link
-    gdrive_link = "https://drive.google.com/uc?id=1HnLCBBbmV3MRrSPARsFOx6kZCqpUCPEo"  # Replace with the actual file ID
-    try:
-        data = pd.read_csv(gdrive_link)
-        # Replace binary values and map grades
-        data['Gender'] = data['Gender'].replace({0: "Male", 1: "Female"})
-        data['Tutoring'] = data['Tutoring'].replace({0: "No", 1: "Yes"})
-        data['Extracurricular'] = data['Extracurricular'].replace({0: "No", 1: "Yes"})
-        grade_mapping = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
-        data['GradeClass'] = data['GradeClass'].map(grade_mapping)
-        return data
-    except Exception as e:
-        st.error(f"Error loading dataset: {e}")
-        return pd.DataFrame()  # Return empty DataFrame if error occurs
+    data_path = "/mnt/data/Student_performance_data _.csv"
+    return pd.read_csv(data_path)
 
-student_data = load_data()
+# Preprocessing function
+@st.cache_data
+def preprocess_data(data):
+    # Encode categorical variables
+    le = LabelEncoder()
+    for column in ['Gender', 'Ethnicity', 'ParentalEducation', 'Tutoring', 'ParentalSupport', 'Extracurricular', 'Sports', 'Music', 'Volunteering']:
+        data[column] = le.fit_transform(data[column])
+    return data
 
-# Train a model to predict GPA and Grade Class
-def train_model(data):
-    # Encoding categorical variables
-    le_gender = LabelEncoder()
-    data['Gender'] = le_gender.fit_transform(data['Gender'])
-    le_tutoring = LabelEncoder()
-    data['Tutoring'] = le_tutoring.fit_transform(data['Tutoring'])
-    le_extracurricular = LabelEncoder()
-    data['Extracurricular'] = le_extracurricular.fit_transform(data['Extracurricular'])
+# Load and preprocess the dataset
+df = load_data()
+df = preprocess_data(df)
 
-    # Prepare features (X) and target (Y)
-    X = data[['Gender', 'Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'Extracurricular']]
-    y_gpa = data['GPA']
-    y_grade = data['GradeClass']
+# Define features and target
+features = df.drop(columns=['StudentID', 'GPA', 'GradeClass'])
+target_gpa = df['GPA']
+target_grade = df['GradeClass']
 
-    # Train test split for GPA prediction
-    X_train, X_test, y_train_gpa, y_test_gpa = train_test_split(X, y_gpa, test_size=0.2, random_state=42)
+# Train-test split
+X_train, X_test, y_train_gpa, y_test_gpa = train_test_split(features, target_gpa, test_size=0.2, random_state=42)
+X_train, X_test, y_train_grade, y_test_grade = train_test_split(features, target_grade, test_size=0.2, random_state=42)
 
-    # Train Linear Regression model for GPA prediction
-    gpa_model = LinearRegression()
-    gpa_model.fit(X_train, y_train_gpa)
+# Ensure test labels are consistent with training
+unique_train_labels = set(y_train_grade)
+y_test_grade = y_test_grade.apply(lambda x: x if x in unique_train_labels else None)
 
-    # Train test split for Grade prediction
-    X_train, X_test, y_train_grade, y_test_grade = train_test_split(X, y_grade, test_size=0.2, random_state=42)
+# Remove rows with unseen labels in y_test_grade
+X_test, y_test_grade = X_test[~y_test_grade.isnull()], y_test_grade[~y_test_grade.isnull()]
 
-    # Train model for Grade Class prediction (classification)
-    grade_model = RandomForestClassifier(random_state=42)
-    grade_model.fit(X_train, y_train_grade)
+# Train Random Forest models
+@st.cache_resource
+def train_model(X, y):
+    model = RandomForestRegressor(random_state=42)
+    model.fit(X, y)
+    return model
 
-    # Evaluate models
-    gpa_predictions = gpa_model.predict(X_test)
-    grade_predictions = grade_model.predict(X_test)
+gpa_model = train_model(X_train, y_train_gpa)
+grade_model = train_model(X_train, y_train_grade)
 
-    gpa_rmse = mean_squared_error(y_test_gpa, gpa_predictions, squared=False)
-    grade_accuracy = accuracy_score(y_test_grade, grade_predictions)
+# Input dropdown for user type
+user_type = st.selectbox("Choose", ["Student", "Teacher", "Administrator"])
 
-    st.write(f"**Model Performance**")
-    st.write(f"GPA Prediction RMSE: {gpa_rmse:.2f}")
-    st.write(f"Grade Prediction Accuracy: {grade_accuracy:.2f}")
+if user_type == "Administrator":
+    st.write("### Administrator Insights")
+    total_students = df['StudentID'].nunique()
+    avg_gpa = df['GPA'].mean()
+    grade_distribution = df['GradeClass'].value_counts()
 
-    return gpa_model, grade_model, le_gender, le_tutoring, le_extracurricular
+    st.write(f"Total Number of Students: {total_students}")
+    st.write(f"Average GPA: {avg_gpa:.2f}")
+    st.write("Grade Distribution:")
+    st.bar_chart(grade_distribution)
 
-gpa_model, grade_model, le_gender, le_tutoring, le_extracurricular = train_model(student_data)
+elif user_type == "Teacher":
+    st.write("### Teacher Insights")
+    student_id = st.selectbox("Select StudentID", df['StudentID'])
+    student_data = df[df['StudentID'] == student_id]
 
-# Administrator View
-def administrator_view(data):
-    st.subheader("Administrator Dashboard")
-    total_students = len(data['StudentID'].unique())
-    avg_gpa = data['GPA'].mean()
-    grade_counts = data['GradeClass'].value_counts()
+    st.write("Student Details:")
+    st.write(student_data)
 
-    st.write(f"**Total Students:** {total_students}")
-    st.write(f"**Average GPA:** {avg_gpa:.2f}")
-    st.write("**Students by Grade:**")
-    st.bar_chart(grade_counts)
+    if st.button("Show Graphical Representation"):
+        st.line_chart(student_data.drop(columns=['StudentID']))
 
-# Teacher View
-def teacher_view(data):
-    st.subheader("Teacher Dashboard")
-    student_id = st.selectbox("Select Student ID", ["Select an option"] + data['StudentID'].tolist())
-    if student_id != "Select an option":
-        student_details = data[data['StudentID'] == student_id]
-        st.write("### Student Details")
-        st.dataframe(student_details)
+elif user_type == "Student":
+    st.write("### Student Performance Prediction")
+    gender = st.selectbox("Select Gender", ["Male", "Female"])
+    age = st.selectbox("Select Age", list(range(10, 21)))
 
-        if st.button("View Graphical Representation"):
-            st.write("Graphical Representation of Student Details")
+    if age not in range(15, 19):
+        st.warning("Chosen wrong value, kindly choose between 15 and 18")
+    else:
+        study_time = st.selectbox("Select Weekly Study Time", ["0-5", "5-10", "10-15", "15-20"])
+        absences = st.selectbox("Select Absences Range", ["0-5", "5-10", "10-15", "15-20", "25-30"])
+        tutoring = st.selectbox("Receive Tutoring?", ["No", "Yes"])
+        extracurricular = st.selectbox("Participate in Extracurricular Activities?", ["No", "Yes"])
 
-            # Select only numeric data for plotting
-            numeric_data = student_details.select_dtypes(include=['number']).drop(columns=['StudentID'], errors='ignore')
-            
-            # Check if there's numeric data to plot
-            if numeric_data.empty:
-                st.error("No numeric data available for plotting.")
-                return
+        # Preprocess inputs
+        input_data = pd.DataFrame({
+            'Gender': [0 if gender == "Male" else 1],
+            'Age': [age],
+            'StudyTimeWeekly': [float(study_time.split('-')[1]) - 2.5],
+            'Absences': [float(absences.split('-')[1]) - 2.5],
+            'Tutoring': [0 if tutoring == "No" else 1],
+            'Extracurricular': [0 if extracurricular == "No" else 1]
+        })
 
-            # Transpose for better visualization
-            numeric_data = numeric_data.T
-            numeric_data.columns = ['Value']
+        # Make predictions
+        gpa_prediction = gpa_model.predict(input_data)[0]
+        grade_prediction = grade_model.predict(input_data)[0]
 
-            # Plot the data
-            fig, ax = plt.subplots()
-            numeric_data.plot(kind='bar', legend=False, ax=ax, color='skyblue')
-            plt.title(f"Student ID: {student_id} - Numeric Details")
-            st.pyplot(fig)
+        # Map numeric GradeClass to alphabet
+        grade_map = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E'}
+        grade_letter = grade_map.get(round(grade_prediction), "Unknown")
 
-# Student View
-def student_view(data):
-    st.subheader("Student Dashboard")
-
-    # Select Gender
-    gender = st.selectbox("Select Gender", ["Select an option", "Male", "Female"])
-    if gender == "Select an option":
-        return
-
-    # Select Age
-    age = st.selectbox("Select Age", ["Select an option"] + list(range(15, 19)))  # Allowable range is 15-18
-    if age == "Select an option":
-        return
-
-    # Select Study Time Weekly
-    study_time = st.selectbox("Select Study Time Weekly", ["Select an option", "0-5", "5-10", "10-15", "15-20"])
-    if study_time == "Select an option":
-        return
-    study_time_min, study_time_max = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20)}.get(study_time, (0, 0))
-
-    # Select Absences
-    absences = st.selectbox("Select Absences", ["Select an option", "0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
-    if absences == "Select an option":
-        return
-    absences_min, absences_max = {"0-5": (0, 5), "5-10": (5, 10), "10-15": (10, 15), "15-20": (15, 20), "20-25": (20, 25), "25-30": (25, 30)}.get(absences, (0, 0))
-
-    # Select Tutoring
-    tutoring = st.selectbox("Tutoring", ["Select an option", "No", "Yes"])
-    if tutoring == "Select an option":
-        return
-    tutoring_value = {"No": 0, "Yes": 1}[tutoring]
-
-    # Select Extracurricular
-    extracurricular = st.selectbox("Extracurricular", ["Select an option", "No", "Yes"])
-    if extracurricular == "Select an option":
-        return
-    extracurricular_value = {"No": 0, "Yes": 1}[extracurricular]
-
-    # Prepare the input data
-    input_data = pd.DataFrame([[gender, age, study_time_min, absences_min, tutoring_value, extracurricular_value]],
-                              columns=['Gender', 'Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'Extracurricular'])
-
-    # Apply the same label encoding used during training
-    input_data['Gender'] = le_gender.transform(input_data['Gender'])
-    input_data['Tutoring'] = le_tutoring.transform(input_data['Tutoring'])
-    input_data['Extracurricular'] = le_extracurricular.transform(input_data['Extracurricular'])
-
-    # Predict GPA and Grade
-    predicted_gpa = gpa_model.predict(input_data)[0]
-    predicted_grade = grade_model.predict(input_data)[0]
-
-    # Inverse transform for GradeClass (if required)
-    grade_map = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
-    predicted_grade = grade_map.get(predicted_grade, "N/A")
-
-    st.write(f"**Predicted GPA:** {predicted_gpa:.2f}")
-    st.write(f"**Predicted Grade Class:** {predicted_grade}")
-
-    # Recommendation based on grade
-    recommendation = {
-        "A": "Performed good, keep it up.",
-        "B": "Working hard, do not stop now.",
-        "C": "There are chances of going higher, keep the motivation high.",
-        "D": "Can do better, work harder and put more effort.",
-        "E": "Needs improvement, focus on the priorities."
-    }
-    st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
-
-if __name__ == "__main__":
-    st.sidebar.title("Choose your Role")
-    role = st.sidebar.radio("Select Role", ["Administrator", "Teacher", "Student"])
-
-    if role == "Administrator":
-        administrator_view(student_data)
-    elif role == "Teacher":
-        teacher_view(student_data)
-    elif role == "Student":
-        student_view(student_data)
+        recommendations = {
+            'A': "Performed good, keep it up!",
+            'B': "Working hard, do not stop now!",
+            'C': "There are chances of going higher, keep the motivation high!",
+            'D': "Can do better, work harder and put more effort!",
+            'E': "Needs improvement, focus on the priorities!"
+        }
+        st.write(f"Predicted GPA: {gpa_prediction:.2f}")
+        st.write(f"Predicted Grade: {grade_letter}")
+        st.write(f"Recommendation: {recommendations.get(grade_letter, 'No recommendation available.')}")
