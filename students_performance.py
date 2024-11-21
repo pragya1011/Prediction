@@ -50,11 +50,23 @@ def teacher_view(data):
 
     if st.button("View Graphical Representation"):
         st.write("Graphical Representation of Student Details")
-        student_details = student_details.drop(columns=['StudentID']).T
-        student_details.columns = ['Value']
+
+        # Select only numeric data for plotting
+        numeric_data = student_details.select_dtypes(include=['number']).drop(columns=['StudentID'], errors='ignore')
+        
+        # Check if there's numeric data to plot
+        if numeric_data.empty:
+            st.error("No numeric data available for plotting.")
+            return
+
+        # Transpose for better visualization
+        numeric_data = numeric_data.T
+        numeric_data.columns = ['Value']
+
+        # Plot the data
         fig, ax = plt.subplots()
-        student_details.plot(kind='bar', legend=False, ax=ax, color='skyblue')
-        plt.title("Student Details")
+        numeric_data.plot(kind='bar', legend=False, ax=ax, color='skyblue')
+        plt.title(f"Student ID: {student_id} - Numeric Details")
         st.pyplot(fig)
 
 # Student View
