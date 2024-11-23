@@ -7,6 +7,46 @@ Original file is located at
     https://colab.research.google.com/drive/17RpWu_7weSpWF34owjnHYdXN7_qLvg99
 """
 
+import subprocess
+import sys
+import os
+
+def install_system_packages():
+    try:
+        # Check if the system is Linux and the package manager is apt (Debian-based)
+        if os.name == "posix" and os.path.exists("/etc/debian_version"):
+            subprocess.check_call(["sudo", "apt-get", "update"])
+            subprocess.check_call(["sudo", "apt-get", "install", "-y", "python3-distutils"])
+            print("Successfully installed python3-distutils.")
+        else:
+            print("This script currently supports Debian-based Linux systems for system-level installations.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to install system-level packages: {e}")
+        sys.exit(1)
+
+def install_pip_dependencies():
+    dependencies = [
+        "pandas==2.0.3",
+        "scikit-learn==1.3.0",
+        "streamlit==1.23.0",
+        "matplotlib==3.8.0",
+        "numpy==1.25.2",
+        "pillow>=6.2.0,<10.0.0"
+    ]
+    
+    for package in dependencies:
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to install {package}: {e}")
+            sys.exit(1)
+
+# Step 1: Install system-level packages (if necessary)
+install_system_packages()
+
+# Step 2: Install Python packages
+install_pip_dependencies()
+
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
