@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/17RpWu_7weSpWF34owjnHYdXN7_qLvg99
 """
 
-: pip install --upgrade pip
 import subprocess
 import sys
 import os
@@ -23,6 +22,7 @@ def install_pip_dependencies():
         "matplotlib==3.8.0",
         "numpy==1.25.2",
         "pillow>=6.2.0,<10.0.0",
+        "setuptools>=60.0.0",  # Added setuptools explicitly
     ]
 
     for package in dependencies:
@@ -165,7 +165,7 @@ elif role == "Student":
             absences_range[0],    # Approximation using range start
             tutoring_binary,
             extracurricular_binary
-        ]]
+        ]]  # Preparing input for prediction
 
         # Make Predictions
         predicted_gpa = model_gpa.predict(input_data)[0]
