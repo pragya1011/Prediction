@@ -10,16 +10,24 @@ Original file is located at
 import subprocess
 import sys
 import os
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import mean_squared_error
 
 def install_system_packages():
     try:
         # Check if the system is Linux and the package manager is apt (Debian-based)
         if os.name == "posix" and os.path.exists("/etc/debian_version"):
+            print("Checking and installing required system-level packages...")
             subprocess.check_call(["sudo", "apt-get", "update"])
             subprocess.check_call(["sudo", "apt-get", "install", "-y", "python3-distutils"])
             print("Successfully installed python3-distutils.")
         else:
-            print("This script currently supports Debian-based Linux systems for system-level installations.")
+            print("This script supports only Debian-based Linux systems for system-level installations.")
     except subprocess.CalledProcessError as e:
         print(f"Failed to install system-level packages: {e}")
         sys.exit(1)
@@ -46,14 +54,6 @@ install_system_packages()
 
 # Step 2: Install Python packages
 install_pip_dependencies()
-
-import pandas as pd
-import streamlit as st
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import mean_squared_error
 
 # Load the dataset from a Google Drive link
 @st.cache_data
@@ -168,7 +168,7 @@ elif role == "Student":
             absences_range[0],    # Approximation using range start
             tutoring_binary,
             extracurricular_binary
-        ]]
+        ]]  # Expecting a 2D array for prediction
 
         # Make Predictions
         predicted_gpa = model_gpa.predict(input_data)[0]
@@ -188,3 +188,4 @@ elif role == "Student":
             "E": "Needs improvement, focus on the priorities."
         }
         st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
+
