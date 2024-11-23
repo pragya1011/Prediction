@@ -10,28 +10,33 @@ Original file is located at
 import subprocess
 import sys
 import os
-import streamlit as st
 import pandas as pd
+import streamlit as st
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error
 
+# Step 1: Install system-level dependencies if needed
 def install_system_packages():
     try:
         # Check if the system is Linux and the package manager is apt (Debian-based)
         if os.name == "posix" and os.path.exists("/etc/debian_version"):
-            print("Checking and installing required system-level packages...")
+            print("Updating package list...")
             subprocess.check_call(["sudo", "apt-get", "update"])
+            
+            print("Installing python3-distutils...")
             subprocess.check_call(["sudo", "apt-get", "install", "-y", "python3-distutils"])
+            
             print("Successfully installed python3-distutils.")
         else:
-            print("This script supports only Debian-based Linux systems for system-level installations.")
+            print("This script currently supports Debian-based Linux systems for system-level installations.")
     except subprocess.CalledProcessError as e:
         print(f"Failed to install system-level packages: {e}")
         sys.exit(1)
 
+# Step 2: Install Python dependencies using pip
 def install_pip_dependencies():
     dependencies = [
         "pandas==2.0.3",
@@ -45,15 +50,16 @@ def install_pip_dependencies():
     for package in dependencies:
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+            print(f"Successfully installed {package}.")
         except subprocess.CalledProcessError as e:
             print(f"Failed to install {package}: {e}")
             sys.exit(1)
 
-# Step 1: Install system-level packages (if necessary)
+# Install necessary system-level and pip dependencies
 install_system_packages()
-
-# Step 2: Install Python packages
 install_pip_dependencies()
+
+# Step 3: Define your Streamlit app functionality
 
 # Load the dataset from a Google Drive link
 @st.cache_data
@@ -168,7 +174,7 @@ elif role == "Student":
             absences_range[0],    # Approximation using range start
             tutoring_binary,
             extracurricular_binary
-        ]]  # Expecting a 2D array for prediction
+        ]]
 
         # Make Predictions
         predicted_gpa = model_gpa.predict(input_data)[0]
@@ -188,4 +194,3 @@ elif role == "Student":
             "E": "Needs improvement, focus on the priorities."
         }
         st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
-
