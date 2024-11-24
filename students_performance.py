@@ -7,35 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/17RpWu_7weSpWF34owjnHYdXN7_qLvg99
 """
 
-import subprocess
-import sys
-import os
-
-def install_pip_dependencies():
-    """
-    Installs Python pip dependencies listed in the dependencies list.
-    """
-    dependencies = [
-        "pandas==2.0.3",
-        "scikit-learn==1.3.0",
-        "streamlit==1.23.0",
-        "matplotlib==3.8.0",
-        "numpy==1.25.2",
-        "pillow>=6.2.0,<10.0.0",
-        "setuptools>=60.0.0",  # Added setuptools explicitly
-    ]
-
-    for package in dependencies:
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to install {package}: {e}")
-            sys.exit(1)
-
-# Install Python packages if running locally (not needed for Streamlit Cloud)
-if "VIRTUAL_ENV" in os.environ:  # Only execute in virtual environments
-    install_pip_dependencies()
-
 # Import libraries
 import pandas as pd
 import streamlit as st
