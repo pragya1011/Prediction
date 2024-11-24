@@ -152,6 +152,6 @@ elif role == "Student":
     st.bar_chart(graph_data.drop(["Predicted Grade"], axis=1))
 
     # Overall Dataset distribution per GradeClass
-     st.bar_chart(student_data['GradeClass'].value_counts())
+    st.bar_chart(student_data['GradeClass'].value_counts())
     else:
         st.error("Model not trained properly. Please check the dataset.")
