@@ -133,19 +133,29 @@ elif role == "Student":
     # Use trained model to predict GPA and Grade
     prediction_gpa = model_gpa.predict([[gender_binary, age, study_time_range[0], absences_range[0], tutoring_binary, extracurricular_binary]])
     prediction_grade = model_grade.predict([[gender_binary, age, study_time_range[0], absences_range[0], tutoring_binary, extracurricular_binary]])
+    grade_letter = ['A', 'B', 'C', 'D', 'E'][int(prediction_grade[0])]
 
     st.write(f"Predicted GPA: {prediction_gpa[0]:.2f}")
-    st.write(f"Predicted Grade: {['A', 'B', 'C', 'D', 'E'][int(prediction_grade[0])]}")
+    st.write(f"Predicted Grade: {grade_letter}")
 
-     # Recommendation based on Grade
-        recommendations = {
-            'A': "Performed good, keep it up!",
-            'B': "Working hard, do not stop now!",
-            'C': "There are chances of going higher, keep the motivation high.",
-            'D': "Can do better, work harder and put more effort.",
-            'E': "Needs improvement, focus on the priorities."
-        }
-        st.write(f"Recommendation: {recommendations[grade_letter]}")
+    # Recommendations based on Grade
+    st.subheader("Recommendations")
+    recommendations = {
+        'A': "Performed good, keep it up!",
+        'B': "Working hard, do not stop now!",
+        'C': "There are chances of going higher, keep the motivation high.",
+        'D': "Can do better, work harder and put more effort.",
+        'E': "Needs improvement, focus on the priorities."
+    }
+    st.write(f"Recommendation: {recommendations[grade_letter]}")
+
+    # Additional Recommendations based on GPA
+    if prediction_gpa[0] < 2.5:
+        st.write("**Note:** Your GPA is predicted to be low. Consider attending tutoring sessions and increasing your study time.")
+    if absences_range[0] > 15:
+        st.write("**Note:** Your absences are relatively high. Try reducing them for better performance.")
+    if study_time_range[0] < 10:
+        st.write("**Note:** Consider increasing your weekly study hours to improve your GPA.")
 
     # Graph 1: Grade distribution graph
     st.write("**Overall Grade Distribution:**")
