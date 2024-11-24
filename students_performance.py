@@ -154,4 +154,15 @@ elif role == "Student":
 
     # Dropdown for Extracurricular
     extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
-    extracurricular_binary = 0 if extracurricular == "No"
+    extracurricular_binary = 0 if extracurricular == "No" else 1
+
+    # Use trained model to predict GPA and Grade
+    prediction_gpa = model_gpa.predict([[gender_binary, study_time_range[0], absences_range[0], tutoring_binary, extracurricular_binary]])
+    prediction_grade = model_grade.predict([[gender_binary, study_time_range[0], absences_range[0], tutoring_binary, extracurricular_binary]])
+
+    st.write(f"Predicted GPA: {prediction_gpa[0]:.2f}")
+    st.write(f"Predicted Grade: {['A', 'B', 'C', 'D', 'E'][int(prediction_grade[0])]}")
+
+    # Show grade distribution
+    grade_counts = student_data['GradeClass'].value_counts()
+    st.bar_chart(grade_counts)
