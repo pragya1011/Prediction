@@ -154,35 +154,4 @@ elif role == "Student":
 
     # Dropdown for Extracurricular
     extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
-    extracurricular_binary = 0 if extracurricular == "No" else 1
-
-    # Step 3: Predict GPA and GradeClass
-    if st.button("Predict Performance"):
-        # Prepare data for prediction
-        input_data = [[
-            gender_binary,
-            study_time_range[0],  # Approximation using range start
-            absences_range[0],    # Approximation using range start
-            tutoring_binary,
-            extracurricular_binary
-        ]]  # Preparing input for prediction
-
-        # Make Predictions
-        predicted_gpa = model_gpa.predict(input_data)[0]
-        predicted_grade_index = int(model_grade.predict(input_data)[0])
-        predicted_grade = ['A', 'B', 'C', 'D', 'E'][predicted_grade_index]
-
-        # Display Results
-        st.write(f"Predicted GPA: {predicted_gpa:.2f}")
-        st.write(f"Predicted Grade Class: {predicted_grade}")
-
-        # Recommendation based on grade
-        recommendation = {
-            "A": "Performed good, keep it up.",
-            "B": "Working hard, do not stop now.",
-            "C": "There are chances of going higher, keep the motivation high.",
-            "D": "Can do better, work harder and put more effort.",
-            "E": "Needs improvement, focus on the priorities."
-        }
-        st.write(f"**Recommendation:** {recommendation.get(predicted_grade, 'Focus on improving next time.')}")
-
+    extracurricular_binary = 0 if extracurricular == "No"
