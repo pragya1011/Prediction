@@ -35,7 +35,7 @@ def load_data():
         data['Tutoring'] = le_tutoring.fit_transform(data['Tutoring'])  # No=0, Yes=1
         data['Extracurricular'] = le_extracurricular.fit_transform(data['Extracurricular'])  # No=0, Yes=1
         
-        # Ensure GradeClass mapping is consistent
+        # Map GradeClass to numeric
         grade_mapping = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
         data['GradeClass'] = data['GradeClass'].map(grade_mapping)
         return data
@@ -57,10 +57,8 @@ def train_model(data):
     y_grade = data['GradeClass'].apply(lambda x: ['A', 'B', 'C', 'D', 'E'].index(x))  # Convert grades to numeric
     
     # Split data into training and testing sets
-    X_train, X_test, y_train_gpa, y_test_gpa = train_test_split(
-        X, y_gpa, test_size=0.2, random_state=42)
-    _, _, y_train_grade, y_test_grade = train_test_split(
-        X, y_grade, test_size=0.2, random_state=42)
+    X_train, X_test, y_train_gpa, y_test_gpa, y_train_grade, y_test_grade = train_test_split(
+        X, y_gpa, y_grade, test_size=0.2, random_state=42)
     
     # Initialize the RandomForest models for GPA and Grade prediction
     model_gpa = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -81,10 +79,7 @@ def train_model(data):
     return model_gpa, model_grade, mse_gpa, mse_grade
 
 # Train the model once the data is loaded
-if not student_data.empty:
-    model_gpa, model_grade, mse_gpa, mse_grade = train_model(student_data)
-else:
-    model_gpa, model_grade, mse_gpa, mse_grade = None, None, None, None
+model_gpa, model_grade, mse_gpa, mse_grade = train_model(student_data)
 
 # Role-based Views
 role = st.selectbox("Choose", ["Student", "Teacher", "Administrator"])
@@ -112,50 +107,46 @@ elif role == "Teacher":
 elif role == "Student":
     st.subheader("Student Performance Prediction")
 
-    if model_gpa and model_grade:
-        # Dropdown for Gender
-        gender = st.selectbox("Select Gender", ["Male", "Female"])
-        gender_binary = 0 if gender == "Male" else 1
+    # Dropdown for Gender
+    gender = st.selectbox("Select Gender", ["Male", "Female"])
+    gender_binary = 0 if gender == "Male" else 1
 
-        # Dropdown for Age
-        age = st.selectbox("Select Age", [15, 16, 17, 18])
+    # Dropdown for Age
+    age = st.selectbox("Select Age", sorted(student_data['Age'].unique()))
 
-        # Dropdown for Study Time Weekly
-        study_time = st.selectbox("Study Time Weekly (hours)", ["0-5", "5-10", "10-15", "15-20"])
-        study_time_range = [int(x) for x in study_time.split("-")]
+    # Dropdown for Study Time Weekly
+    study_time = st.selectbox("Study Time Weekly (hours)", ["0-5", "5-10", "10-15", "15-20"])
+    study_time_range = [int(x) for x in study_time.split("-")]
 
-        # Dropdown for Absences
-        absences = st.selectbox("Absences", ["0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
-        absences_range = [int(x) for x in absences.split("-")]
+    # Dropdown for Absences
+    absences = st.selectbox("Absences", ["0-5", "5-10", "10-15", "15-20", "20-25", "25-30"])
+    absences_range = [int(x) for x in absences.split("-")]
 
-        # Dropdown for Tutoring
-        tutoring = st.selectbox("Tutoring", ["No", "Yes"])
-        tutoring_binary = 0 if tutoring == "No" else 1
+    # Dropdown for Tutoring
+    tutoring = st.selectbox("Tutoring", ["No", "Yes"])
+    tutoring_binary = 0 if tutoring == "No" else 1
 
-        # Dropdown for Extracurricular
-        extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
-        extracurricular_binary = 0 if extracurricular == "No" else 1
+    # Dropdown for Extracurricular
+    extracurricular = st.selectbox("Extracurricular", ["No", "Yes"])
+    extracurricular_binary = 0 if extracurricular == "No" else 1
 
-        # Use trained model to predict GPA and Grade
-        prediction_input = [[gender_binary, age, study_time_range[0], absences_range[0], tutoring_binary, extracurricular_binary]]
-        prediction_gpa = model_gpa.predict(prediction_input)
-        prediction_grade = model_grade.predict(prediction_input)
+    # Use trained model to predict GPA and Grade
+    prediction_gpa = model_gpa.predict([[gender_binary, age, study_time_range[0], absences_range[0], tutoring_binary, extracurricular_binary]])
+    prediction_grade = model_grade.predict([[gender_binary, age, study_time_range[0], absences_range[0], tutoring_binary, extracurricular_binary]])
 
-        st.write(f"Predicted GPA: {prediction_gpa[0]:.2f}")
-        grade_letter = ['A', 'B', 'C', 'D', 'E'][int(round(prediction_grade[0]))]
-        st.write(f"Predicted Grade: {grade_letter}")
+    st.write(f"Predicted GPA: {prediction_gpa[0]:.2f}")
+    st.write(f"Predicted Grade: {['A', 'B', 'C', 'D', 'E'][int(prediction_grade[0])]}")
 
-        # Recommendation based on Grade
-        recommendations = {
-            'A': "Performed good, keep it up!",
-            'B': "Working hard, do not stop now!",
-            'C': "There are chances of going higher, keep the motivation high.",
-            'D': "Can do better, work harder and put more effort.",
-            'E': "Needs improvement, focus on the priorities."
-        }
-        st.write(f"Recommendation: {recommendations[grade_letter]}")
-
-        # Show grade distribution
-        st.bar_chart(student_data['GradeClass'].value_counts())
-    else:
-        st.error("Model not trained properly. Please check the dataset.")
+    # Graph based on selected inputs (excluding Gender)
+    st.write("Graphical Analysis:")
+    graph_data = pd.DataFrame({
+        "Age": [age],
+        "Study Time": [study_time_range[0]],
+        "Absences": [absences_range[0]],
+        "Tutoring": [tutoring],
+        "Extracurricular": [extracurricular],
+        "Predicted GPA": [prediction_gpa[0]],
+        "Predicted Grade": [int(prediction_grade[0])],
+    })
+    
+    st.bar_chart(graph_data.drop(["Predicted Grade"], axis=1))
