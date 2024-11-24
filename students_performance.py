@@ -137,6 +137,16 @@ elif role == "Student":
     st.write(f"Predicted GPA: {prediction_gpa[0]:.2f}")
     st.write(f"Predicted Grade: {['A', 'B', 'C', 'D', 'E'][int(prediction_grade[0])]}")
 
+     # Recommendation based on Grade
+        recommendations = {
+            'A': "Performed good, keep it up!",
+            'B': "Working hard, do not stop now!",
+            'C': "There are chances of going higher, keep the motivation high.",
+            'D': "Can do better, work harder and put more effort.",
+            'E': "Needs improvement, focus on the priorities."
+        }
+        st.write(f"Recommendation: {recommendations[grade_letter]}")
+
     # Graph 1: Grade distribution graph
     st.write("**Overall Grade Distribution:**")
     grade_counts = student_data['GradeClass'].value_counts()
