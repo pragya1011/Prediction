@@ -137,21 +137,18 @@ elif role == "Student":
     st.write(f"Predicted GPA: {prediction_gpa[0]:.2f}")
     st.write(f"Predicted Grade: {['A', 'B', 'C', 'D', 'E'][int(prediction_grade[0])]}")
 
-    # Graph based on selected inputs (excluding Gender)
-    st.write("Graphical Analysis:")
-    graph_data = pd.DataFrame({
-        "Age": [age],
-        "Study Time": [study_time_range[0]],
-        "Absences": [absences_range[0]],
-        "Tutoring": [tutoring],
-        "Extracurricular": [extracurricular],
-        "Predicted GPA": [prediction_gpa[0]],
-        "Predicted Grade": [int(prediction_grade[0])],
-    })
-    
-    st.bar_chart(graph_data.drop(["Predicted Grade"], axis=1))
+    # Graph 1: Grade distribution graph
+    st.write("**Overall Grade Distribution:**")
+    grade_counts = student_data['GradeClass'].value_counts()
+    st.bar_chart(grade_counts)
 
-    # Overall Dataset distribution per GradeClass
-    st.bar_chart(student_data['GradeClass'].value_counts())
-    else:
-        st.error("Model not trained properly. Please check the dataset.")
+    # Graph 2: Prediction visualization
+    st.write("**Input-Based Prediction Graph:**")
+    graph_data = pd.DataFrame({
+        "Factors": ["Age", "Study Time", "Absences", "Tutoring", "Extracurricular", "Predicted GPA"],
+        "Values": [
+            age, study_time_range[0], absences_range[0], 
+            tutoring_binary, extracurricular_binary, prediction_gpa[0]
+        ]
+    })
+    st.bar_chart(graph_data.set_index("Factors"))
