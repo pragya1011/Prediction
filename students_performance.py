@@ -109,7 +109,7 @@ elif role == "Teacher":
         st.write(details)
 
 elif role == "Student":
-    st.subheader("Student Performance Prediction")
+    st.subheader("Check your performance")
 
     # Dropdown for Gender
     gender = st.selectbox("Select Gender", ["Male", "Female"])
