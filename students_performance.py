@@ -16,6 +16,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error
 
+# Add title and subtitle
+st.title("GradeWise")
+st.subheader("A Data-driven Approach to Guide Students Towards Academic Excellence")
+
 # Load the dataset from a Google Drive link
 @st.cache_data
 def load_data():
